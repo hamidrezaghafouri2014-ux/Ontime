@@ -1,0 +1,5 @@
+- [x] Update `settings.gradle.kts` with explicit Maven URLs
+- [x] Update `libs.versions.toml` with AGP 8.7.2 and Room 2.6.0
+- [x] Ensure `gradle.properties` has configuration cache disabled
+- [/] Run Gradle sync
+- [ ] Build project to verify resolution
