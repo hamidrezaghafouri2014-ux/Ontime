@@ -81,4 +81,15 @@ interface TaskDao {
     suspend fun getCompletionsForDateOnce(
         date: String
     ): List<TaskCompletionEntity>
+
+    @Query("SELECT COUNT(*) FROM tasks")
+    suspend fun getTaskCount(): Int
+
+    @androidx.room.Transaction
+    suspend fun insertTaskWithFreeLimit(task: TaskEntity): Long {
+        if (getTaskCount() >= 3) {
+            return -1L
+        }
+        return insertTask(task)
+    }
 }

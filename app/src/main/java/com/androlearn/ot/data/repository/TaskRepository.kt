@@ -15,7 +15,16 @@ class TaskRepository @Inject constructor(
 
     fun getTasksByDay(day: String): Flow<List<TaskEntity>> = taskDao.getTasksByDay(day)
 
-    suspend fun insertTask(task: TaskEntity): Long = taskDao.insertTask(task)
+    suspend fun insertTask(
+        task: TaskEntity,
+        isPro: Boolean
+    ): Long {
+        return if (isPro) {
+            taskDao.insertTask(task)
+        } else {
+            taskDao.insertTaskWithFreeLimit(task)
+        }
+    }
 
     suspend fun updateTask(task: TaskEntity) = taskDao.updateTask(task)
 

@@ -66,10 +66,15 @@ class TaskViewModel @Inject constructor(
         return days[dayOfWeek - 1]
     }
 
-    fun addTask(task: TaskEntity) {
+    fun addTask(
+        task: TaskEntity,
+        isPro: Boolean
+    ) {
         viewModelScope.launch {
-
-            val id = repository.insertTask(task)
+            val id = repository.insertTask(
+                task = task,
+                isPro = isPro
+            )
 
             val savedTask = task.copy(
                 id = id.toInt()
