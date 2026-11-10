@@ -13,11 +13,14 @@
     import dagger.hilt.android.lifecycle.HiltViewModel
     import kotlinx.coroutines.launch
     import javax.inject.Inject
+    import com.androlearn.ot.data.billing.ProPreferences
+    import kotlinx.coroutines.flow.first
 
     @HiltViewModel
     class AddTaskViewModel @Inject constructor(
         private val repository: TaskRepository,
-        private val alarmScheduler: AlarmScheduler
+        private val alarmScheduler: AlarmScheduler,
+        private val proPreferences: ProPreferences
     ) : ViewModel() {
 
         var timeError by mutableStateOf<String?>(null)
@@ -129,7 +132,17 @@
 
             viewModelScope.launch {
                 try {
-                    val id = repository.insertTask(task)
+                    val isPro = proPreferences.isPro.first()
+
+                    val id = repository.insertTask(
+                        task = task,
+                        isPro = isPro
+                    )
+
+                    if (id == -1L) {
+                        timeError = "به حداکثر ۳ تسک رایگان رسیده‌ای. برای ساخت تسک نامحدود، OnTime Pro را فعال کن."
+                        return@launch
+                    }
 
                     if (id <= 0L) {
                         timeError = "ذخیره تسک در دیتابیس ناموفق بود."

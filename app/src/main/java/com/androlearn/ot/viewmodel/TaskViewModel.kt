@@ -105,6 +105,18 @@ class TaskViewModel @Inject constructor(
             )
         }
     }
+
+    fun updateTask(task: TaskEntity) {
+        viewModelScope.launch {
+            repository.updateTask(task)
+
+            if (task.notificationEnabled) {
+                alarmScheduler.scheduleTask(task)
+            } else {
+                alarmScheduler.cancelTask(task.id)
+            }
+        }
+    }
     fun deleteTask(task: TaskEntity) {
         viewModelScope.launch {
 

@@ -18,6 +18,24 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        val marketApplicationId = "ir.mservices.market"
+        val marketBindAddress =
+            "ir.mservices.market.InAppBillingService.BIND"
+
+        manifestPlaceholders["marketApplicationId"] =
+            marketApplicationId
+
+        manifestPlaceholders["marketBindAddress"] =
+            marketBindAddress
+
+        manifestPlaceholders["marketPermission"] =
+            "$marketApplicationId.BILLING"
+
+        buildConfigField(
+            "String",
+            "IAB_PUBLIC_KEY",
+            "\"MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQChiCGsXZw5U9sXWwNoc5dkf1hQjdj3parlH9Y1UHKVdv74+YcHbh2rTiykVbo9BJdELwrp9cfGj7XiPbTzX5Kgqif8JAdHgVcm0/aELYWkaSX5YXldQ2BSgn+MwFPOaV+C0mw2jb6OtoKVBArDNGNpOoJyHSg41392K3/3zx+kOwIDAQAB\""
+        )
     }
 
     buildTypes {
@@ -33,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -66,17 +85,13 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
 
+    //myket
+    implementation(libs.billing)
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
-    // Tests
-    testImplementation(libs.junit)
-
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.test.manifest)

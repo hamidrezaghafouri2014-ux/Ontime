@@ -78,7 +78,9 @@ fun TimerScreen(
         Button(
             onClick = {
                 task?.let {
-                    viewModel.addTask(it.copy(isCompleted = true)) // addTask uses REPLACE strategy, so it updates
+                    viewModel.updateTask(
+                        task.copy(isCompleted = true)
+                    )
                     navController.popBackStack()
                 }
             },
