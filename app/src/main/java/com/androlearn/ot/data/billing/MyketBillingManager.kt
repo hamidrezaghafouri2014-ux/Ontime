@@ -85,14 +85,12 @@ class MyketBillingManager(
                     return@launchPurchaseFlow
                 }
 
-                if (purchase.sku == PRODUCT_ID) {
-                    scope.launch(Dispatchers.IO) {
-                        proPreferences.setPro(true)
-                    }
-
-                    onProStatusChanged(true)
-                    Log.d(TAG, "OnTime Pro purchased")
+                if (purchase.sku != PRODUCT_ID) {
+                    onError("شناسه محصول خریداری‌شده معتبر نیست")
+                    return@launchPurchaseFlow
                 }
+
+                checkPurchasedProduct()
             },
             "ontime-pro-lifetime"
         )

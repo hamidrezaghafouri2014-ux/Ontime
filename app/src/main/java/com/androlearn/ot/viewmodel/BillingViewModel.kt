@@ -1,6 +1,7 @@
 
 package com.androlearn.ot.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +29,12 @@ class BillingViewModel @Inject constructor(
     val error = _error.asStateFlow()
 
     private var billingManager: MyketBillingManager? = null
+
+
+    fun disconnect() {
+        billingManager?.dispose()
+        billingManager = null
+    }
 
     fun connect(activity: Activity) {
         if (billingManager != null) return
@@ -57,8 +64,7 @@ class BillingViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        billingManager?.dispose()
-        billingManager = null
+        disconnect()
         super.onCleared()
     }
 }
