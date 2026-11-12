@@ -13,14 +13,25 @@ import com.androlearn.ot.data.local.entity.TaskCompletionEntity
         TaskEntity::class,
         TaskCompletionEntity::class
     ],
-    version = 6,
-    exportSchema = false
+    version = 7,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
 
     companion object {
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            ALTER TABLE tasks
+            ADD COLUMN timerEndMillis INTEGER NOT NULL DEFAULT 0
+            """.trimIndent()
+                )
+            }
+        }
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {

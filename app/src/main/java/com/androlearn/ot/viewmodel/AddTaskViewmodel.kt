@@ -151,11 +151,13 @@
 
                     val savedTask = task.copy(id = id.toInt())
 
-                    onSuccess()
-
                     if (notificationEnabled) {
                         try {
-                            alarmScheduler.scheduleTask(savedTask)
+                            val scheduled = alarmScheduler.scheduleTask(savedTask)
+
+                            if (!scheduled) {
+                                timeError = "تسک ذخیره شد، اما اعلان زمان‌بندی نشد. مجوز هشدار دقیق را فعال کن."
+                            }
                         } catch (e: Exception) {
                             android.util.Log.e(
                                 "AddTaskViewModel",
@@ -164,6 +166,8 @@
                             )
                         }
                     }
+
+                    onSuccess()
 
                 } catch (e: Exception) {
                     android.util.Log.e(

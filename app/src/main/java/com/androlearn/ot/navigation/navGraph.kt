@@ -29,7 +29,8 @@ fun NavGraph(
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
     customPrimary: Color,
-    onCustomPrimaryChange: (Color) -> Unit
+    onCustomPrimaryChange: (Color) -> Unit,
+    onRequestExactAlarmPermission: () -> Unit
 ) {
 
     NavHost(
@@ -63,7 +64,8 @@ fun NavGraph(
         composable(Screen.AddTask.route) {
             AddTask(
                 navController = navController,
-                paddingValues = paddingValues
+                paddingValues = paddingValues,
+                onRequestExactAlarmPermission = onRequestExactAlarmPermission
             )
         }
 

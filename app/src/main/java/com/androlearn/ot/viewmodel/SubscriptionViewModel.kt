@@ -1,8 +1,9 @@
+
 package com.androlearn.ot.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.androlearn.ot.data.local.PreferencesManager
+import com.androlearn.ot.data.billing.ProPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,11 +13,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SubscriptionViewModel @Inject constructor(
-    private val preferencesManager: PreferencesManager
+    private val proPreferences: ProPreferences
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> =
-        preferencesManager.isPro.stateIn(
+        proPreferences.isPro.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = false
@@ -24,7 +25,7 @@ class SubscriptionViewModel @Inject constructor(
 
     fun setProStatus(isPro: Boolean) {
         viewModelScope.launch {
-            preferencesManager.setProStatus(isPro)
+            proPreferences.setPro(isPro)
         }
     }
 }

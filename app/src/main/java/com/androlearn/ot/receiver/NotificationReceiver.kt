@@ -7,8 +7,10 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -17,7 +19,13 @@ import com.androlearn.ot.data.local.entity.TaskEntity
 import com.androlearn.ot.util.AlarmScheduler
 import com.androlearn.ot.worker.FollowUpWorker
 import com.androlearn.ot.R
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
+import android.Manifest
+import androidx.work.ExistingWorkPolicy
 
 class NotificationReceiver : BroadcastReceiver() {
 
@@ -27,10 +35,20 @@ class NotificationReceiver : BroadcastReceiver() {
         intent: Intent
     ) {
 
+        val endHour = intent.getIntExtra("TASK_END_HOUR", 0)
+        val endMinute = intent.getIntExtra("TASK_END_MINUTE", 0)
+
         val taskId =
             intent.getIntExtra("TASK_ID", -1)
 
         if (taskId == -1) return
+
+        val notificationEnabled = intent.getBooleanExtra(
+            "TASK_NOTIFICATION_ENABLED",
+            true
+        )
+
+        if (!notificationEnabled) return
 
         val taskTitle =
             intent.getStringExtra("TASK_TITLE")
@@ -53,15 +71,24 @@ class NotificationReceiver : BroadcastReceiver() {
             question = question
         )
 
-        scheduleFollowUp(
+        showNotification(
             context = context,
             taskId = taskId,
-            startMillis = startMillis
+            taskTitle = taskTitle,
+            question = question
         )
 
         scheduleNextOccurrence(
             context = context,
             intent = intent
+        )
+
+        scheduleFollowUp(
+            context = context,
+            taskId = taskId,
+            startMillis = startMillis,
+            endHour = endHour,
+            endMinute = endMinute
         )
     }
 
@@ -71,6 +98,16 @@ class NotificationReceiver : BroadcastReceiver() {
         taskTitle: String,
         question: String
     ) {
+
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
 
         val channelId = "tasks"
 
@@ -155,30 +192,47 @@ class NotificationReceiver : BroadcastReceiver() {
     private fun scheduleFollowUp(
         context: Context,
         taskId: Int,
-        startMillis: Long
+        startMillis: Long,
+        endHour: Int,
+        endMinute: Int
     ) {
 
+        val startCalendar = Calendar.getInstance().apply {
+            timeInMillis = startMillis
+        }
+
+        val endCalendar = startCalendar.clone() as Calendar
+
+        endCalendar.set(Calendar.HOUR_OF_DAY, endHour)
+        endCalendar.set(Calendar.MINUTE, endMinute)
+        endCalendar.set(Calendar.SECOND, 0)
+        endCalendar.set(Calendar.MILLISECOND, 0)
+
+        if (endCalendar.timeInMillis <= startMillis) {
+            endCalendar.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
         val followUpTime =
-            startMillis +
+            endCalendar.timeInMillis +
                     TimeUnit.MINUTES.toMillis(20)
 
-        val delay =
-            (
-                    followUpTime -
-                            System.currentTimeMillis()
-                    ).coerceAtLeast(0L)
+        val delay = (
+                followUpTime - System.currentTimeMillis()
+                ).coerceAtLeast(1_000L)
 
-        val data =
-            Data.Builder()
-                .putInt(
-                    "TASK_ID",
-                    taskId
-                )
-                .build()
+        val data = Data.Builder()
+            .putInt("TASK_ID", taskId)
+            .putString(
+                "TASK_DATE",
+                SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    .format(Date(startMillis))
+            )
+            .build()
 
         val workRequest =
             OneTimeWorkRequestBuilder<FollowUpWorker>()
                 .setInputData(data)
+                .addTag("follow_up_$taskId")
                 .setInitialDelay(
                     delay,
                     TimeUnit.MILLISECONDS
@@ -187,7 +241,11 @@ class NotificationReceiver : BroadcastReceiver() {
 
         WorkManager
             .getInstance(context)
-            .enqueue(workRequest)
+            .enqueueUniqueWork(
+                "follow_up_$taskId",
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
     }
 
     private fun scheduleNextOccurrence(
@@ -277,7 +335,11 @@ class NotificationReceiver : BroadcastReceiver() {
                 startMinute = startMinute,
                 endHour = endHour,
                 endMinute = endMinute,
-                color = 0,
+                color = intent.getIntExtra("TASK_COLOR", 0),
+                priority = intent.getIntExtra("TASK_PRIORITY", 2),
+                deadlineMillis = intent.getLongExtra("TASK_DEADLINE_MILLIS", -1L)
+                    .takeIf { it >= 0L },
+                isMovable = intent.getBooleanExtra("TASK_IS_MOVABLE", true),
                 selectedDays = selectedDays,
                 endDateMillis = endDateMillis,
                 endDateText = endDateText,

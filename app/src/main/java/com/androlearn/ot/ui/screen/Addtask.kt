@@ -69,9 +69,8 @@ import java.time.format.DateTimeFormatter
 fun AddTask(
     navController: NavHostController,
     paddingValues: PaddingValues,
-    onBack: () -> Unit = {
-        navController.popBackStack()
-    },
+    onRequestExactAlarmPermission: () -> Unit,
+    onBack: () -> Unit = { navController.popBackStack() },
     viewModel: AddTaskViewModel = hiltViewModel()
 ) {
 
@@ -494,6 +493,10 @@ fun AddTask(
                         checked = viewModel.notificationEnabled,
                         onCheckedChange = {
                             viewModel.notificationEnabled = it
+
+                            if (it) {
+                                onRequestExactAlarmPermission()
+                            }
                         }
                     )
                 }

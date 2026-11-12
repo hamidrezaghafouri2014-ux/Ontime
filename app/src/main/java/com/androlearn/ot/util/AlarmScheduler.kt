@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.work.WorkManager
 import com.androlearn.ot.data.local.entity.TaskEntity
 import com.androlearn.ot.receiver.NotificationReceiver
 import java.util.Calendar
@@ -37,16 +38,27 @@ class AlarmScheduler(
     )
 
     @SuppressLint("ScheduleExactAlarm")
-    fun scheduleTask(task: TaskEntity) {
+    fun scheduleTask(task: TaskEntity): Boolean {
 
-        if (!task.notificationEnabled) return
+        if (!task.notificationEnabled) return true
 
-        cancelTask(task.id)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                return false
+            }
+        }
 
         val selectedDays = task.selectedDays
             .split(",")
             .map { it.trim() }
-            .filter { it.isNotEmpty() }
+            .filter { it in dayToCalendar.keys }
+            .distinct()
+
+        if (selectedDays.isEmpty()) {
+            return false
+        }
+
+        cancelTask(task.id)
 
         selectedDays.forEach { day ->
 
@@ -56,23 +68,26 @@ class AlarmScheduler(
             val requestIndex = dayIndex[day]
                 ?: return@forEach
 
-            val calendar = getNextOccurrence(
-                calendarDay = calendarDay,
-                hour = task.startHour,
-                minute = task.startMinute,
-                reminderMinutes = task.reminderMinutes
-            )
-
-            if (task.endDateMillis > 0L && calendar.timeInMillis > task.endDateMillis) {
-                return@forEach
-            }
-
             val startCalendar = getNextOccurrence(
                 calendarDay = calendarDay,
                 hour = task.startHour,
-                minute = task.startMinute,
-                reminderMinutes = 0
+                minute = task.startMinute
             )
+
+            val reminderCalendar = startCalendar.clone() as Calendar
+            reminderCalendar.add(Calendar.MINUTE, -task.reminderMinutes)
+
+            if (reminderCalendar.timeInMillis <= System.currentTimeMillis()) {
+                startCalendar.add(Calendar.WEEK_OF_YEAR, 1)
+                reminderCalendar.add(Calendar.WEEK_OF_YEAR, 1)
+            }
+
+            if (
+                task.endDateMillis > 0L &&
+                startCalendar.timeInMillis > task.endDateMillis
+            ) {
+                return@forEach
+            }
 
             val intent = Intent(
                 context,
@@ -80,6 +95,14 @@ class AlarmScheduler(
             ).apply {
 
                 putExtra("TASK_ID", task.id)
+
+                putExtra("TASK_COLOR", task.color)
+
+                putExtra("TASK_PRIORITY", task.priority)
+
+                putExtra("TASK_DEADLINE_MILLIS", task.deadlineMillis ?: -1L)
+
+                putExtra("TASK_IS_MOVABLE", task.isMovable)
 
                 putExtra(
                     "TASK_TITLE",
@@ -152,13 +175,17 @@ class AlarmScheduler(
 
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
+                reminderCalendar.timeInMillis,
                 pendingIntent
             )
         }
+
+        return true
     }
 
     fun cancelTask(taskId: Int) {
+        WorkManager.getInstance(context)
+            .cancelAllWorkByTag("follow_up_$taskId")
 
         dayIndex.values.forEach { index ->
 
@@ -191,8 +218,7 @@ class AlarmScheduler(
     private fun getNextOccurrence(
         calendarDay: Int,
         hour: Int,
-        minute: Int,
-        reminderMinutes: Int
+        minute: Int
     ): Calendar {
 
         val now = Calendar.getInstance()
@@ -222,11 +248,6 @@ class AlarmScheduler(
             set(
                 Calendar.MILLISECOND,
                 0
-            )
-
-            add(
-                Calendar.MINUTE,
-                -reminderMinutes
             )
         }
 

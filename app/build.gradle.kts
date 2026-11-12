@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 android {
     namespace = "com.androlearn.ot"
     compileSdk = 37
@@ -96,4 +100,7 @@ dependencies {
     // Debug
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
 }

@@ -1,5 +1,6 @@
 package com.androlearn.ot.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -30,10 +31,17 @@ data class TaskEntity(
 
     val reminderMinutes: Int = 0,
 
+    @ColumnInfo(defaultValue = "0")
+    val timerEndMillis: Long = 0L,
+
     val isCompleted: Boolean = false,
 
     // Smart Recovery
+    @ColumnInfo(defaultValue = "2")
     val priority: Int = 2,
+
     val deadlineMillis: Long? = null,
+
+    @ColumnInfo(defaultValue = "1")
     val isMovable: Boolean = true
 )

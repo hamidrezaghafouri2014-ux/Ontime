@@ -51,11 +51,84 @@ class TaskViewModel @Inject constructor(
                 initialValue = emptyList()
             )
 
+    private val _timerTask = MutableStateFlow<TaskEntity?>(null)
+    val timerTask: StateFlow<TaskEntity?> = _timerTask
+
     fun completionsForDate(date: String) =
         repository.getCompletionsForDate(date)
 
     fun setSelectedDay(day: String) {
         _selectedDay.value = day
+    }
+
+    fun loadOrStartTimer(taskId: Int) {
+        viewModelScope.launch {
+            val task = repository.getTaskById(taskId) ?: run {
+                _timerTask.value = null
+                return@launch
+            }
+
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            val todayStart = calendar.timeInMillis
+
+            val shouldStart =
+                task.timerEndMillis == 0L ||
+                        task.timerEndMillis < todayStart
+
+            val updatedTask = if (shouldStart) {
+                val start = task.startHour * 60L + task.startMinute
+                val end = task.endHour * 60L + task.endMinute
+
+                val durationMillis = (end - start) * 60_000L
+
+                task.copy(
+                    timerEndMillis = System.currentTimeMillis() +
+                            durationMillis.coerceAtLeast(0L)
+                )
+            } else {
+                task
+            }
+
+            if (updatedTask != task) {
+                repository.updateTask(updatedTask)
+            }
+
+            _timerTask.value = updatedTask
+        }
+    }
+
+    fun completeTimer(
+        taskId: Int,
+        date: String,
+        onCompleted: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val task = repository.getTaskById(taskId)
+                ?: return@launch
+
+            repository.saveTaskCompletion(
+                TaskCompletionEntity(
+                    taskId = taskId,
+                    date = date,
+                    isCompleted = true
+                )
+            )
+
+            val updatedTask = task.copy(
+                timerEndMillis = System.currentTimeMillis()
+            )
+
+            repository.updateTask(updatedTask)
+            _timerTask.value = updatedTask
+
+            onCompleted()
+        }
     }
 
     private fun getCurrentDay(): String {
@@ -76,12 +149,19 @@ class TaskViewModel @Inject constructor(
                 isPro = isPro
             )
 
+            if (id <= 0L) return@launch
+
             val savedTask = task.copy(
                 id = id.toInt()
             )
 
             if (savedTask.notificationEnabled) {
-                alarmScheduler.scheduleTask(savedTask)
+                val scheduled = alarmScheduler.scheduleTask(savedTask)
+
+                if (!scheduled) {
+                    // زمان‌بندی اعلان موفق نشد
+                    return@launch
+                }
             }
         }
     }

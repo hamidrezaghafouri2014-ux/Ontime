@@ -92,4 +92,10 @@ interface TaskDao {
         }
         return insertTask(task)
     }
+
+    @androidx.room.Transaction
+    suspend fun deleteTaskWithCompletions(task: TaskEntity) {
+        deleteTaskCompletions(task.id)
+        deleteTask(task)
+    }
 }
